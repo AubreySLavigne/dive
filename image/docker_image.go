@@ -15,10 +15,17 @@ import (
 	"golang.org/x/net/context"
 )
 
-var dockerVersion string
+type dockerImageAnalyzer struct {
+	id        string
+	client    *client.Client
+	jsonFiles map[string][]byte
+	trees     []*filetree.FileTree
+	layerMap  map[string]*filetree.FileTree
+	layers    []*dockerLayer
+}
 
-func newDockerImageAnalyzer(imageId string) Analyzer {
-	return &dockerImageAnalyzer{
+func newDockerImageAnalyzer(imageId string) dockerImageAnalyzer {
+	return dockerImageAnalyzer{
 		// store discovered json files in a map so we can read the image in one pass
 		jsonFiles: make(map[string][]byte),
 		layerMap:  make(map[string]*filetree.FileTree),
@@ -55,28 +62,35 @@ func newDockerImageConfig(configBytes []byte) dockerImageConfig {
 	return imageConfig
 }
 
+// Fetch creates a New API client with the local environment variables, then
+// checks whether the image already exists locally. If the image does not
+// exist, Fetch will attempt to pull the image from the web.
+//
+// Fetch will return the selected image from the docker host. It's up to the
+// caller to store the images and close the stream.
 func (image *dockerImageAnalyzer) Fetch() (io.ReadCloser, error) {
 	var err error
 
-	// pull the image if it does not exist
-	ctx := context.Background()
-	image.client, err = client.NewClientWithOpts(client.WithVersion(dockerVersion), client.FromEnv)
+	// Create a Docker client
+	image.client, err = client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
+
+	// Pull the background context
+	ctx := context.Background()
+
+	// Check to see if the image is available locally
 	_, _, err = image.client.ImageInspectWithRaw(ctx, image.id)
 	if err != nil {
-		// don't use the API, the CLI has more informative output
+		// Image not found locally. Request the image from the web
+		// Don't use the API, the CLI has more informative output
 		fmt.Printf("Image not available locally. Trying to pull '%s'...\n", image.id)
 		utils.RunDockerCmd("pull", image.id)
 	}
 
-	readCloser, err := image.client.ImageSave(ctx, []string{image.id})
-	if err != nil {
-		return nil, err
-	}
-
-	return readCloser, nil
+	// Returns images from the Docker host as an io.ReadCloser stream
+	return image.client.ImageSave(ctx, []string{image.id})
 }
 
 func (image *dockerImageAnalyzer) Parse(tarFile io.ReadCloser) error {

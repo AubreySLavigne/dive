@@ -3,7 +3,6 @@ package image
 import (
 	"io"
 
-	"github.com/docker/docker/client"
 	"github.com/wagoodman/dive/filetree"
 )
 
@@ -32,15 +31,6 @@ type AnalysisResult struct {
 	WastedUserPercent float64 // = wasted-bytes/user-size-bytes
 	WastedBytes       uint64
 	Inefficiencies    filetree.EfficiencySlice
-}
-
-type dockerImageAnalyzer struct {
-	id        string
-	client    *client.Client
-	jsonFiles map[string][]byte
-	trees     []*filetree.FileTree
-	layerMap  map[string]*filetree.FileTree
-	layers    []*dockerLayer
 }
 
 type dockerImageHistoryEntry struct {
