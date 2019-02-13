@@ -10,7 +10,7 @@ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDk
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/docker/distribution v0.0.0-20181126153310-93e082742a009850ac46962150b2f652a822c5ff h1:dtgxyWsA/HV5EbB2FO4YKoCKEjLwr8SXZQCGjA9mRx4=
 github.com/docker/distribution v0.0.0-20181126153310-93e082742a009850ac46962150b2f652a822c5ff/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
-github.com/docker/docker v0.0.0-20181126153310-0b7cb16dde4a20d024c7be59801d63bcfd18611b h1:T6w2S9UvmzJQBKIUsOs3+lNWfZea5yUPLh2eMihRrKY=
+github.com/docker/docker v0.0.0-20181126153310-0b7cb16dde4a20d024c7be59801d63bcfd18611b h1:C23qRhx3B3aMAtWOn2mLj0pWiapqJmZyzoHRpTLpcHk=
 github.com/docker/docker v0.0.0-20181126153310-0b7cb16dde4a20d024c7be59801d63bcfd18611b/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
 github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=

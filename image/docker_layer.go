@@ -2,9 +2,10 @@ package image
 
 import (
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/wagoodman/dive/filetree"
 	"strings"
+
+	humanize "github.com/dustin/go-humanize"
+	"github.com/wagoodman/dive/filetree"
 )
 
 const (
@@ -50,25 +51,18 @@ func (layer *dockerLayer) ShortId() string {
 	}
 	id = id[0:rangeBound]
 
-	// show the tagged image as the last layer
-	// if len(layer.History.Tags) > 0 {
-	// 	id = "[" + strings.Join(layer.History.Tags, ",") + "]"
-	// }
-
 	return id
 }
 
 // String represents a layer in a columnar format.
 func (layer *dockerLayer) String() string {
 
+	var src string
 	if layer.index == 0 {
-		return fmt.Sprintf(LayerFormat,
-			layer.ShortId(),
-			humanize.Bytes(layer.Size()),
-			"FROM "+layer.ShortId())
+		src = "FROM " + layer.ShortId()
+	} else {
+		src = layer.Command()
 	}
-	return fmt.Sprintf(LayerFormat,
-		layer.ShortId(),
-		humanize.Bytes(layer.Size()),
-		layer.Command())
+
+	return fmt.Sprintf(LayerFormat, layer.ShortId(), humanize.Bytes(layer.Size()), src)
 }

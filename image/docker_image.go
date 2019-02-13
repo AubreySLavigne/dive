@@ -4,14 +4,15 @@ import (
 	"archive/tar"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"strings"
+
 	"github.com/docker/docker/client"
 	"github.com/sirupsen/logrus"
 	"github.com/wagoodman/dive/filetree"
 	"github.com/wagoodman/dive/utils"
 	"golang.org/x/net/context"
-	"io"
-	"io/ioutil"
-	"strings"
 )
 
 var dockerVersion string
@@ -66,7 +67,7 @@ func (image *dockerImageAnalyzer) Fetch() (io.ReadCloser, error) {
 	_, _, err = image.client.ImageInspectWithRaw(ctx, image.id)
 	if err != nil {
 		// don't use the API, the CLI has more informative output
-		fmt.Println("Image not available locally. Trying to pull '" + image.id + "'...")
+		fmt.Printf("Image not available locally. Trying to pull '%s'...\n", image.id)
 		utils.RunDockerCmd("pull", image.id)
 	}
 
@@ -242,9 +243,9 @@ func (image *dockerImageAnalyzer) getFileList(tarReader *tar.Reader) ([]filetree
 
 		switch header.Typeflag {
 		case tar.TypeXGlobalHeader:
-			return nil, fmt.Errorf("unexptected tar file: (XGlobalHeader): type=%v name=%s", header.Typeflag, name)
+			return nil, fmt.Errorf("Provided Tar file '%s' has unexpected header '%v' (XGlobalHeader)", name, header.Typeflag)
 		case tar.TypeXHeader:
-			return nil, fmt.Errorf("unexptected tar file (XHeader): type=%v name=%s", header.Typeflag, name)
+			return nil, fmt.Errorf("Provided Tar file '%s' has unexpected header '%v' (XHeader)", name, header.Typeflag)
 		default:
 			files = append(files, filetree.NewFileInfo(tarReader, header, name))
 		}

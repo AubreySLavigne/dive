@@ -1,13 +1,11 @@
 package image
 
 import (
+	"io"
+
 	"github.com/docker/docker/client"
 	"github.com/wagoodman/dive/filetree"
-	"io"
 )
-
-type Parser interface {
-}
 
 type Analyzer interface {
 	Fetch() (io.ReadCloser, error)
