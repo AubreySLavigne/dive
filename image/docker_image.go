@@ -134,25 +134,26 @@ func (image *dockerImageAnalyzer) Parse(tarFile io.ReadCloser) error {
 		name := header.Name
 
 		// some layer tars can be relative layer symlinks to other layer tars
-		if header.Typeflag == tar.TypeSymlink || header.Typeflag == tar.TypeReg {
+		if header.Typeflag != tar.TypeSymlink && header.Typeflag != tar.TypeReg {
+			continue
+		}
 
-			if strings.HasSuffix(name, "layer.tar") {
-				currentLayer++
-				if err != nil {
-					return err
-				}
-				layerReader := tar.NewReader(tarReader)
-				err := image.processLayerTar(name, currentLayer, layerReader)
-				if err != nil {
-					return err
-				}
-			} else if strings.HasSuffix(name, ".json") {
-				fileBuffer, err := ioutil.ReadAll(tarReader)
-				if err != nil {
-					return err
-				}
-				image.jsonFiles[name] = fileBuffer
+		if strings.HasSuffix(name, "layer.tar") {
+			currentLayer++
+			if err != nil {
+				return err
 			}
+			layerReader := tar.NewReader(tarReader)
+			err := image.processLayerTar(name, currentLayer, layerReader)
+			if err != nil {
+				return err
+			}
+		} else if strings.HasSuffix(name, ".json") {
+			fileBuffer, err := ioutil.ReadAll(tarReader)
+			if err != nil {
+				return err
+			}
+			image.jsonFiles[name] = fileBuffer
 		}
 	}
 

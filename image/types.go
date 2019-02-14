@@ -57,11 +57,3 @@ type dockerRootFs struct {
 	Type    string   `json:"type"`
 	DiffIds []string `json:"diff_ids"`
 }
-
-// Layer represents a Docker image layer and metadata
-type dockerLayer struct {
-	tarPath string
-	history dockerImageHistoryEntry
-	index   int
-	tree    *filetree.FileTree
-}

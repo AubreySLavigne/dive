@@ -12,6 +12,14 @@ const (
 	LayerFormat = "%-25s %7s  %s"
 )
 
+// Layer represents a Docker image layer and metadata
+type dockerLayer struct {
+	tarPath string
+	history dockerImageHistoryEntry
+	index   int
+	tree    *filetree.FileTree
+}
+
 // ShortId returns the truncated id of the current layer.
 func (layer *dockerLayer) TarId() string {
 	return strings.TrimSuffix(layer.tarPath, "/layer.tar")
@@ -45,13 +53,10 @@ func (layer *dockerLayer) Command() string {
 // ShortId returns the truncated id of the current layer.
 func (layer *dockerLayer) ShortId() string {
 	rangeBound := 25
-	id := layer.Id()
-	if length := len(id); length < 25 {
-		rangeBound = length
+	if len(layer.history.ID) > rangeBound {
+		return layer.history.ID[0:25]
 	}
-	id = id[0:rangeBound]
-
-	return id
+	return layer.history.ID
 }
 
 // String represents a layer in a columnar format.
