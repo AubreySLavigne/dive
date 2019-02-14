@@ -77,7 +77,7 @@ func (image *dockerImageAnalyzer) Fetch() (io.ReadCloser, error) {
 		return nil, err
 	}
 
-    // Check that we have the image
+	// Check that we have the image
 	FetchImage(*image.Client, image.id)
 
 	// Returns images from the Docker host as an io.ReadCloser stream
@@ -236,7 +236,7 @@ func (image *dockerImageAnalyzer) processLayerTar(name string, layerIdx uint, re
 	message := fmt.Sprintf("  ├─ %s %s ", title, "working...")
 	fmt.Printf("\r%s", message)
 
-	fileInfos, err := image.getFileList(reader)
+	fileInfos, err := getFileList(reader)
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func (image *dockerImageAnalyzer) processLayerTar(name string, layerIdx uint, re
 	return nil
 }
 
-func (image *dockerImageAnalyzer) getFileList(tarReader *tar.Reader) ([]filetree.FileInfo, error) {
+func getFileList(tarReader *tar.Reader) ([]filetree.FileInfo, error) {
 	var files []filetree.FileInfo
 
 	for {
