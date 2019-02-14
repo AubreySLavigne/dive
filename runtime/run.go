@@ -2,17 +2,19 @@ package runtime
 
 import (
 	"fmt"
-	"github.com/dustin/go-humanize"
+	"io/ioutil"
+	"log"
+	"os"
+	"strconv"
+
+	"github.com/docker/docker/client"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
 	"github.com/wagoodman/dive/filetree"
 	"github.com/wagoodman/dive/image"
 	"github.com/wagoodman/dive/runtime/ci"
 	"github.com/wagoodman/dive/ui"
 	"github.com/wagoodman/dive/utils"
-	"io/ioutil"
-	"log"
-	"os"
-	"strconv"
 )
 
 func title(s string) string {
@@ -77,12 +79,29 @@ func Run(options Options) {
 		options.ImageId = runBuild(options.BuildArgs)
 	}
 
-	analyzer := image.GetAnalyzer(options.ImageId)
+	// Create a Docker client
+	// Note: Providing an empty version will not send the version information
+	//       to the client. Providing this is recommended, as it's possible
+	//       the integration will break if the Docker version is changed.
+	client, err := client.NewClientWithOpts(client.WithVersion(""), client.FromEnv)
+	if err != nil {
+		fmt.Printf("Cannot load Docker Client: %v\n", err)
+		utils.Exit(1)
+	}
 
 	fmt.Println(title("Fetching image..."))
-	reader, err := analyzer.Fetch()
+	err = image.FetchImage(*client, options.ImageId)
 	if err != nil {
-		fmt.Printf("cannot fetch image: %v\n", err)
+		fmt.Printf("Cannot fetch image: %v\n", err)
+		utils.Exit(1)
+	}
+
+	analyzer := image.GetAnalyzer(options.ImageId)
+	analyzer.Client = client
+
+	reader, err := image.RetrieveImage(*client, options.ImageId)
+	if err != nil {
+		fmt.Printf("Cannot retrieve image: %v\n", err)
 		utils.Exit(1)
 	}
 	defer reader.Close()

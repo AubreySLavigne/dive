@@ -17,7 +17,7 @@ import (
 
 type dockerImageAnalyzer struct {
 	id        string
-	client    *client.Client
+	Client    *client.Client
 	jsonFiles map[string][]byte
 	trees     []*filetree.FileTree
 	layerMap  map[string]*filetree.FileTree
@@ -72,25 +72,46 @@ func (image *dockerImageAnalyzer) Fetch() (io.ReadCloser, error) {
 	var err error
 
 	// Create a Docker client
-	image.client, err = client.NewClientWithOpts(client.FromEnv)
+	image.Client, err = client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
 
-	// Pull the background context
+    // Check that we have the image
+	FetchImage(*image.Client, image.id)
+
+	// Returns images from the Docker host as an io.ReadCloser stream
+	return RetrieveImage(*image.Client, image.id)
+}
+
+// FetchImage verifies whether the image exists locally. If it does not,
+// FetchImage will attempt to pull the image from the web
+func FetchImage(c client.Client, imageID string) error {
+
+	// An empty, non-nil context
 	ctx := context.Background()
 
 	// Check to see if the image is available locally
-	_, _, err = image.client.ImageInspectWithRaw(ctx, image.id)
+	_, _, err := c.ImageInspectWithRaw(ctx, imageID)
 	if err != nil {
 		// Image not found locally. Request the image from the web
 		// Don't use the API, the CLI has more informative output
-		fmt.Printf("Image not available locally. Trying to pull '%s'...\n", image.id)
-		utils.RunDockerCmd("pull", image.id)
+		fmt.Printf("Image not available locally. Trying to pull '%s'...\n", imageID)
+		err = utils.RunDockerCmd("pull", imageID)
 	}
 
-	// Returns images from the Docker host as an io.ReadCloser stream
-	return image.client.ImageSave(ctx, []string{image.id})
+	return err
+}
+
+// RetrieveImage returns an io.ReadCloser reference to the image with ID
+// imageID. It's up to the caller to store the images and close the stream.
+func RetrieveImage(c client.Client, imageID string) (io.ReadCloser, error) {
+
+	// An empty, non-nil context
+	ctx := context.Background()
+
+	// ImageSave retrieves the image with ID/tag imageID as an io.ReadCloser
+	return c.ImageSave(ctx, []string{imageID})
 }
 
 func (image *dockerImageAnalyzer) Parse(tarFile io.ReadCloser) error {
