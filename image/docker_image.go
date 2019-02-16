@@ -263,28 +263,32 @@ func (image *dockerImageAnalyzer) processLayerTar(name string, layerIdx uint, re
 	return nil
 }
 
+// getFileList iterates through the provided tar.Reader and returns an array
+// containing details about the included files.
 func getFileList(tarReader *tar.Reader) ([]filetree.FileInfo, error) {
 	var files []filetree.FileInfo
 
 	for {
 		header, err := tarReader.Next()
+
+		// Until we have checked the full contents of the archive
 		if err == io.EOF {
 			break
-		} else if err != nil {
-			fmt.Println(err)
-			utils.Exit(1)
 		}
 
-		name := header.Name
-
-		switch header.Typeflag {
-		case tar.TypeXGlobalHeader:
-			return nil, fmt.Errorf("Provided Tar file '%s' has unexpected header '%v' (XGlobalHeader)", name, header.Typeflag)
-		case tar.TypeXHeader:
-			return nil, fmt.Errorf("Provided Tar file '%s' has unexpected header '%v' (XHeader)", name, header.Typeflag)
-		default:
-			files = append(files, filetree.NewFileInfo(tarReader, header, name))
+		if err != nil {
+			return nil, err
 		}
+
+		// XGlobalHeader and XHeader are not valid headers
+		if header.Typeflag == tar.TypeXGlobalHeader {
+			return nil, fmt.Errorf("Provided Tar file '%s' has unexpected header '%v' (XGlobalHeader)", header.Name, header.Typeflag)
+		} else if header.Typeflag == tar.TypeXHeader {
+			return nil, fmt.Errorf("Provided Tar file '%s' has unexpected header '%v' (XHeader)", header.Name, header.Typeflag)
+		}
+
+		files = append(files, filetree.NewFileInfo(tarReader, header, header.Name))
 	}
+
 	return files, nil
 }
