@@ -144,10 +144,11 @@ func (image *dockerImageAnalyzer) Parse(tarFile io.ReadCloser) error {
 				return err
 			}
 			layerReader := tar.NewReader(tarReader)
-			err := image.processLayerTar(name, currentLayer, layerReader)
+			tree, err := processLayerTar(name, currentLayer, layerReader)
 			if err != nil {
 				return err
 			}
+			image.layerMap[name] = tree
 		} else if strings.HasSuffix(name, ".json") {
 			fileBuffer, err := ioutil.ReadAll(tarReader)
 			if err != nil {
@@ -228,60 +229,61 @@ func (image *dockerImageAnalyzer) Analyze() (*AnalysisResult, error) {
 	}, nil
 }
 
-// processLayerTar iterates through the files in the provided tar archive.
+// processLayerTar iterates through the files in the provided tar archive and
+// returns the resulting tree
 //
 // todo: it is bad that this is printing out to the screen. As the interface
 //       gets more flushed out, an event update mechanism should be built in
 //       (so the caller can format and print updates)
-func (image *dockerImageAnalyzer) processLayerTar(name string, layerIdx uint, reader *tar.Reader) error {
+func processLayerTar(name string, layerIdx uint, reader *tar.Reader) (*filetree.FileTree, error) {
 	// Create a new filetree.FileTree
 	tree := filetree.NewFileTree()
 	tree.Name = name
 
+	shortName := name[:15]
+
 	// Print the current layer number (layerIdx), and display processing status as 'working...'
-	title := fmt.Sprintf("[layer: %2d]", layerIdx)
-	message := fmt.Sprintf("  ├─ %s %s ", title, "working...")
-	fmt.Printf("\r%s", message)
+	fmt.Printf("\r%s", layerParseProgress(layerIdx, shortName, "working..."))
 
 	// Get a list of the files for the layer
 	fileInfos, err := getFileList(reader)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	shortName := name[:15]
 
 	// Track the progress for processing *this layer*
 	pb := utils.NewProgressBar(int64(len(fileInfos)), 30)
 	for idx, element := range fileInfos {
+
 		// Track the total filesize of this layer
 		tree.FileSize += uint64(element.Size)
 
 		// Add the element to the tree's list of files. This only tracks the
 		// files for a single layer.
 		//
-		// Question: How do directories fit in with this pattern?
-		//
-		// todo: we should check for errors but also allow whiteout files to
-		//       be not be added (thus not error out)
-		tree.AddPath(element.Path, element)
+		// todo: We should allow whiteout files to be not be added (thus not
+		//       error out)
+		_, _, err = tree.AddPath(element.Path, element)
+		if err != nil {
+			return nil, err
+		}
 
-		// If the index has changed, update the status bar.
+		// Only update the status if the whole-number percentage has changed
 		if pb.Update(int64(idx)) {
-			message = fmt.Sprintf("  ├─ %s %s : %s", title, shortName, pb.String())
-			fmt.Printf("\r%s", message)
+			fmt.Printf("\r%s", layerParseProgress(layerIdx, shortName, pb.String()))
 		}
 	}
 
 	// Mark Progress as complete
 	pb.Done()
+	fmt.Printf("\r%s\n", layerParseProgress(layerIdx, shortName, pb.String()))
 
-	message = fmt.Sprintf("  ├─ %s %s : %s", title, shortName, pb.String())
-	fmt.Printf("\r%s\n", message)
+	return tree, nil
+}
 
-	// Record the tree to the image analyzer
-	image.layerMap[tree.Name] = tree
-	return nil
+// layerParseProgress returns a string show the ongoing progress of a given layer
+func layerParseProgress(layerID uint, name, progress string) string {
+	return fmt.Sprintf("  ├─ [layer: %2d] %s : %s", layerID, name, progress)
 }
 
 // getFileList iterates through the provided tar.Reader and returns an array
