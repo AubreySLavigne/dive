@@ -122,7 +122,6 @@ func (image *dockerImageAnalyzer) Parse(tarFile io.ReadCloser) error {
 		header, err := tarReader.Next()
 
 		if err == io.EOF {
-			fmt.Println("  ╧")
 			break
 		}
 
@@ -231,29 +230,19 @@ func (image *dockerImageAnalyzer) Analyze() (*AnalysisResult, error) {
 
 // processLayerTar iterates through the files in the provided tar archive and
 // returns the resulting tree
-//
-// todo: it is bad that this is printing out to the screen. As the interface
-//       gets more flushed out, an event update mechanism should be built in
-//       (so the caller can format and print updates)
 func processLayerTar(name string, layerIdx uint, reader *tar.Reader) (*filetree.FileTree, error) {
 	// Create a new filetree.FileTree
 	tree := filetree.NewFileTree()
 	tree.Name = name
 
-	shortName := name[:15]
-
-	// Print the current layer number (layerIdx), and display processing status as 'working...'
-	fmt.Printf("\r%s", layerParseProgress(layerIdx, shortName, "working..."))
-
 	// Get a list of the files for the layer
 	fileInfos, err := getFileList(reader)
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Track the progress for processing *this layer*
-	pb := utils.NewProgressBar(int64(len(fileInfos)), 30)
-	for idx, element := range fileInfos {
+	for _, element := range fileInfos {
 
 		// Track the total filesize of this layer
 		tree.FileSize += uint64(element.Size)
@@ -267,16 +256,7 @@ func processLayerTar(name string, layerIdx uint, reader *tar.Reader) (*filetree.
 		if err != nil {
 			return nil, err
 		}
-
-		// Only update the status if the whole-number percentage has changed
-		if pb.Update(int64(idx)) {
-			fmt.Printf("\r%s", layerParseProgress(layerIdx, shortName, pb.String()))
-		}
 	}
-
-	// Mark Progress as complete
-	pb.Done()
-	fmt.Printf("\r%s\n", layerParseProgress(layerIdx, shortName, pb.String()))
 
 	return tree, nil
 }
