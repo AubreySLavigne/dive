@@ -228,37 +228,58 @@ func (image *dockerImageAnalyzer) Analyze() (*AnalysisResult, error) {
 	}, nil
 }
 
-// todo: it is bad that this is printing out to the screen. As the interface gets more flushed out, an event update mechanism should be built in (so the caller can format and print updates)
+// processLayerTar iterates through the files in the provided tar archive.
+//
+// todo: it is bad that this is printing out to the screen. As the interface
+//       gets more flushed out, an event update mechanism should be built in
+//       (so the caller can format and print updates)
 func (image *dockerImageAnalyzer) processLayerTar(name string, layerIdx uint, reader *tar.Reader) error {
+	// Create a new filetree.FileTree
 	tree := filetree.NewFileTree()
 	tree.Name = name
 
+	// Print the current layer number (layerIdx), and display processing status as 'working...'
 	title := fmt.Sprintf("[layer: %2d]", layerIdx)
 	message := fmt.Sprintf("  ├─ %s %s ", title, "working...")
 	fmt.Printf("\r%s", message)
 
+	// Get a list of the files for the layer
 	fileInfos, err := getFileList(reader)
 	if err != nil {
 		return err
 	}
 
 	shortName := name[:15]
+
+	// Track the progress for processing *this layer*
 	pb := utils.NewProgressBar(int64(len(fileInfos)), 30)
 	for idx, element := range fileInfos {
+		// Track the total filesize of this layer
 		tree.FileSize += uint64(element.Size)
 
-		// todo: we should check for errors but also allow whiteout files to be not be added (thus not error out)
+		// Add the element to the tree's list of files. This only tracks the
+		// files for a single layer.
+		//
+		// Question: How do directories fit in with this pattern?
+		//
+		// todo: we should check for errors but also allow whiteout files to
+		//       be not be added (thus not error out)
 		tree.AddPath(element.Path, element)
 
+		// If the index has changed, update the status bar.
 		if pb.Update(int64(idx)) {
 			message = fmt.Sprintf("  ├─ %s %s : %s", title, shortName, pb.String())
 			fmt.Printf("\r%s", message)
 		}
 	}
+
+	// Mark Progress as complete
 	pb.Done()
+
 	message = fmt.Sprintf("  ├─ %s %s : %s", title, shortName, pb.String())
 	fmt.Printf("\r%s\n", message)
 
+	// Record the tree to the image analyzer
 	image.layerMap[tree.Name] = tree
 	return nil
 }
