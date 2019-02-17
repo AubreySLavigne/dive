@@ -99,6 +99,7 @@ func Run(options Options) {
 	analyzer := image.GetAnalyzer(options.ImageId)
 	analyzer.Client = client
 
+	fmt.Println(title("Retrieving image...") + " (this can take a while with large images)")
 	reader, err := image.RetrieveImage(*client, options.ImageId)
 	if err != nil {
 		fmt.Printf("Cannot retrieve image: %v\n", err)
